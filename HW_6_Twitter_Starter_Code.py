@@ -193,6 +193,16 @@ def find_most_common_cooccurring_hashtag(tweet_data, hashtag_to_ignore):
     the most commonly co-occurring hashtag with the one we queried (so 
     we're essentially looking for the second most commonly occurring 
     hashtags).'''
+
+    '''
+    Using a counter object to count the frequencies of the objects
+    Since we hope the function not be case-sensitive, I use a bool check to check whether
+    the lowercase key is inside the counter dictionary or not
+    If the key is not inside the dictionary, save the new key into the dictionary
+    Otherwise, increment the value related to original key
+    Also, because we're essentially looking for the second most commonly occurring 
+    hashtags, I just return it and don't use the param hashtag_to_ignore
+    '''
     c = Counter()
     tweets = tweet_data['statuses']
     for t in tweets:
