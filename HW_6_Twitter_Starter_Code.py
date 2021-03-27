@@ -1,13 +1,14 @@
 #########################################
-##### Name:                         #####
-##### Uniqname:                     #####
+##### Name:    JING AN TZENG        #####
+##### Uniqname:     robintzg        #####
 #########################################
-
+from collections import Counter
 from requests_oauthlib import OAuth1
 import json
 import requests
 
-import hw6_secrets_starter as secrets # file that contains your OAuth credentials
+# file that contains your OAuth credentials
+import hw6_secrets_starter as secrets
 
 CACHE_FILENAME = "twitter_cache.json"
 CACHE_DICT = {}
@@ -18,9 +19,10 @@ access_token = secrets.TWITTER_ACCESS_TOKEN
 access_token_secret = secrets.TWITTER_ACCESS_TOKEN_SECRET
 
 oauth = OAuth1(client_key,
-            client_secret=client_secret,
-            resource_owner_key=access_token,
-            resource_owner_secret=access_token_secret)
+               client_secret=client_secret,
+               resource_owner_key=access_token,
+               resource_owner_secret=access_token_secret)
+
 
 def test_oauth():
     ''' Helper function that returns an HTTP 200 OK response code and a 
@@ -39,11 +41,11 @@ def open_cache():
     ''' Opens the cache file if it exists and loads the JSON into
     the CACHE_DICT dictionary.
     if the cache file doesn't exist, creates a new cache dictionary
-    
+
     Parameters
     ----------
     None
-    
+
     Returns
     -------
     The opened cache: dict
@@ -60,20 +62,20 @@ def open_cache():
 
 def save_cache(cache_dict):
     ''' Saves the current state of the cache to disk
-    
+
     Parameters
     ----------
     cache_dict: dict
         The dictionary to save
-    
+
     Returns
     -------
     None
     '''
     dumped_json_cache = json.dumps(cache_dict)
-    fw = open(CACHE_FILENAME,"w")
+    fw = open(CACHE_FILENAME, "w")
     fw.write(dumped_json_cache)
-    fw.close() 
+    fw.close()
 
 
 def construct_unique_key(baseurl, params):
@@ -83,41 +85,46 @@ def construct_unique_key(baseurl, params):
     AUTOGRADER NOTES: To correctly test this using the autograder, use an underscore ("_") 
     to join your baseurl with the params and all the key-value pairs from params
     E.g., baseurl_key1_value1
-    
+
     Parameters
     ----------
     baseurl: string
         The URL for the API endpoint
     params: dict
         A dictionary of param:value pairs
-    
+
     Returns
     -------
     string
         the unique key as a string
     '''
-    #TODO Implement function
-    pass
+    param_strings = []
+    connector = '_'
+    for k in params.keys():
+        param_strings.append(f'{k}_{params[k]}')
+    param_strings.sort()
+    unique_key = baseurl + connector + connector.join(param_strings)
+    return unique_key
 
 
 def make_request(baseurl, params):
     '''Make a request to the Web API using the baseurl and params
-    
+
     Parameters
     ----------
     baseurl: string
         The URL for the API endpoint
     params: dictionary
         A dictionary of param:value pairs
-    
+
     Returns
     -------
     dict
         the data returned from making the request in the form of 
         a dictionary
     '''
-    #TODO Implement function
-    pass
+    response = requests.get(baseurl, params=params, auth=oauth)
+    return response.json()
 
 
 def make_request_with_cache(baseurl, hashtag, count):
@@ -132,7 +139,7 @@ def make_request_with_cache(baseurl, hashtag, count):
     Do no include the print statements in your return statement. Just print them as appropriate.
     This, of course, does not ensure that you correctly retrieved that data from your cache, 
     but it will help us to see if you are appropriately attempting to use the cache.
-    
+
     Parameters
     ----------
     baseurl: string
@@ -141,15 +148,23 @@ def make_request_with_cache(baseurl, hashtag, count):
         The hashtag to search for
     count: integer
         The number of results you request from Twitter
-    
+
     Returns
     -------
     dict
         the results of the query as a dictionary loaded from cache
         JSON
     '''
-    #TODO Implement function
-    pass
+    params = {'q': hashtag, 'count': count}
+    request_key = construct_unique_key(baseurl, params)
+    if request_key in CACHE_DICT.keys():
+        print("cache hit!", request_key)
+        return CACHE_DICT[request_key]
+    else:
+        print("cache miss!", request_key)
+        CACHE_DICT[request_key] = make_request(baseurl, params)
+        save_cache(CACHE_DICT)
+        return CACHE_DICT[request_key]
 
 
 def find_most_common_cooccurring_hashtag(tweet_data, hashtag_to_ignore):
@@ -171,16 +186,26 @@ def find_most_common_cooccurring_hashtag(tweet_data, hashtag_to_ignore):
         queried in make_request_with_cache()
 
     '''
-    # TODO: Implement function 
-    pass
+
     ''' Hint: In case you're confused about the hashtag_to_ignore 
     parameter, we want to ignore the hashtag we queried because it would 
     definitely be the most occurring hashtag, and we're trying to find 
     the most commonly co-occurring hashtag with the one we queried (so 
     we're essentially looking for the second most commonly occurring 
     hashtags).'''
+    c = Counter()
+    tweets = tweet_data['statuses']
+    for t in tweets:
+        for l in t['entities']['hashtags']:
+            check = False
+            for k in c.keys():
+                if l['text'].lower() == k.lower():
+                    c[k] = c[k] + 1
+                    check = True
+            if not check:
+                c[l['text']] = c[l['text']] + 1
+    return "#" + c.most_common(2)[1][0]
 
-    
 
 if __name__ == "__main__":
     if not client_key or not client_secret:
@@ -197,5 +222,9 @@ if __name__ == "__main__":
     count = 100
 
     tweet_data = make_request_with_cache(baseurl, hashtag, count)
-    most_common_cooccurring_hashtag = find_most_common_cooccurring_hashtag(tweet_data, hashtag)
-    print("The most commonly cooccurring hashtag with {} is {}.".format(hashtag, most_common_cooccurring_hashtag))
+
+    most_common_cooccurring_hashtag = find_most_common_cooccurring_hashtag(
+        tweet_data,
+        hashtag)
+    print("The most commonly cooccurring hashtag with {} is {}.".format(
+        hashtag, most_common_cooccurring_hashtag))
